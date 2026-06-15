@@ -7,44 +7,48 @@ const bookRoutes = require('./routes/books');
 
 const app = express();
 
-// Body parser middleware (parsing JSON request body)
+// Middleware
 app.use(express.json());
-
-// Custom request logging middleware
 app.use(logger);
 
-// Database Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/bookstore';
-if (mongoose.connection.readyState === 0) {
-  mongoose.connect(MONGODB_URI)
-    .then(() => console.log('Successfully connected to MongoDB.'))
-    .catch((err) => {
-      console.error('Database connection error:', err.message);
-      if (!process.env.VERCEL) {
-        process.exit(1);
-      }
-    });
-}
+// MongoDB Connection
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// Mount Routes
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Successfully connected to MongoDB.'))
+  .catch((err) => {
+    console.error('Database connection error:', err.message);
+  });
+
+// Routes
 app.use('/api/books', bookRoutes);
 
-// Catch-all route for undefined endpoints
+// Home Route (important for Vercel)
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Online Bookstore API is running'
+  });
+});
+
+// Invalid Routes
 app.use((req, res, next) => {
   const error = new Error(`Route Not Found - ${req.originalUrl}`);
   error.status = 404;
   next(error);
 });
 
-// Global Error Handler
+// Error Handler
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-let server;
-if (!process.env.VERCEL) {
-  server = app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+// Start server locally
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
-module.exports = { app, server };
+// Export for Vercel
+module.exports = app;
