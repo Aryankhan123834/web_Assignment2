@@ -15,12 +15,16 @@ app.use(logger);
 
 // Database Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/bookstore';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Successfully connected to MongoDB.'))
-  .catch((err) => {
-    console.error('Database connection error:', err.message);
-    process.exit(1);
-  });
+if (mongoose.connection.readyState === 0) {
+  mongoose.connect(MONGODB_URI)
+    .then(() => console.log('Successfully connected to MongoDB.'))
+    .catch((err) => {
+      console.error('Database connection error:', err.message);
+      if (!process.env.VERCEL) {
+        process.exit(1);
+      }
+    });
+}
 
 // Mount Routes
 app.use('/api/books', bookRoutes);
@@ -36,8 +40,11 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-});
+let server;
+if (!process.env.VERCEL) {
+  server = app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
+}
 
 module.exports = { app, server };
